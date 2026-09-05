@@ -1,38 +1,18 @@
-# ============================================================
-# Vision2Real – Render Infrastructure Blueprint
-# Specification: https://render.com/docs/blueprint-spec
-# ============================================================
-
 version: "1"
 
-# ------------------------------------------------------------
-# Managed PostgreSQL Database
-# ------------------------------------------------------------
-databases:
-  - name: vision2real-db
-    databaseName: vision2real
-    user: vision2real_user
-    plan: free
-
-# ------------------------------------------------------------
-# Services
-# ------------------------------------------------------------
 services:
-
-  # ──────────────────────────────────────────────────────────
-  # 1. FastAPI AI Engine  (Web Service / Python 3.11)
-  # ──────────────────────────────────────────────────────────
+  # ==========================
+  # FastAPI Backend
+  # ==========================
   - type: web
     name: vision2real-api
     runtime: python
     plan: free
     rootDir: ai-engine
 
-    # Install deps, then run Alembic migrations before starting uvicorn.
-    # migrations/env.py pulls VISION2REAL_DATABASE_URL_SYNC from Settings;
-    # config.py normalises postgres:// → postgresql+psycopg:// automatically.
     buildCommand: pip install -r requirements.txt
-    startCommand: >-
+
+    startCommand: >
       alembic upgrade head &&
       uvicorn app.main:app --host 0.0.0.0 --port $PORT
 
@@ -40,7 +20,6 @@ services:
     autoDeploy: true
 
     envVars:
-      # ── Core ────────────────────────────────────────────────
       - key: VISION2REAL_ENVIRONMENT
         value: production
 
@@ -50,11 +29,9 @@ services:
       - key: VISION2REAL_EXECUTION_MODE
         value: v1
 
-      # Auto-generated and stored as a Render secret.
       - key: VISION2REAL_SECRET_KEY
         generateValue: true
 
-      # ── JWT ─────────────────────────────────────────────────
       - key: VISION2REAL_JWT_SECRET_KEY
         generateValue: true
 
@@ -67,39 +44,25 @@ services:
       - key: VISION2REAL_REFRESH_TOKEN_EXPIRE_DAYS
         value: "30"
 
-      # ── Database ─────────────────────────────────────────────
-      # Render supplies a postgres:// URL. config.py field_validator
-      # normalises it to postgresql+asyncpg:// (async) and
-      # postgresql+psycopg:// (sync / Alembic) at runtime.
+      # Set this manually in Render Dashboard
       - key: VISION2REAL_DATABASE_URL
-        fromDatabase:
-          name: vision2real-db
-          property: connectionString
+        sync: false
 
       - key: VISION2REAL_DATABASE_URL_SYNC
-        fromDatabase:
-          name: vision2real-db
-          property: connectionString
+        sync: false
 
-      # ── CORS ─────────────────────────────────────────────────
-      # Set this manually in the Render dashboard after deploy.
-      # Enter ALL origins that will call the API, e.g.:
-      #   https://vision2real.in,https://www.vision2real.in,https://vision2real-web.onrender.com
       - key: VISION2REAL_ALLOWED_ORIGINS
         sync: false
 
-      # ── LLM ──────────────────────────────────────────────────
       - key: VISION2REAL_LLM_PROVIDER
         value: auto
 
       - key: VISION2REAL_RESEARCH_PROVIDER
         value: tavily
 
-      # ── Google OAuth ─────────────────────────────────────────
       - key: VISION2REAL_GOOGLE_CLIENT_ID
         sync: false
 
-      # ── LLM API Keys  (enter in Render dashboard) ─────────────
       - key: VISION2REAL_GEMINI_API_KEY
         sync: false
 
@@ -109,34 +72,29 @@ services:
       - key: VISION2REAL_GROQ_API_KEY
         sync: false
 
-      # ── Research ─────────────────────────────────────────────
       - key: VISION2REAL_TAVILY_API_KEY
         sync: false
 
-      # ── Admin Bootstrap  (required in production) ─────────────
-      # Validated by validate_required_config() on every startup.
-      # Never commit real values — enter in Render dashboard.
       - key: VISION2REAL_ADMIN_BOOTSTRAP_EMAIL
         sync: false
 
       - key: VISION2REAL_ADMIN_BOOTSTRAP_PASSWORD
         sync: false
 
-  # ──────────────────────────────────────────────────────────
-  # 2. React + Vite Frontend  (Static Site)
-  # ──────────────────────────────────────────────────────────
-  - type: web
+  # ==========================
+  # React Frontend
+  # ==========================
+  - type: static
     name: vision2real-web
-    runtime: static
-    plan: starter
+    plan: free
     rootDir: web-app
 
-    # tsc type-check then Vite production build → outputs to dist/
     buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    autoDeploy: true
 
-    # SPA fallback: all paths served as index.html (React Router handles routing).
+    staticPublishPath: dist
+
+    pullRequestPreviewsEnabled: false
+
     routes:
       - type: rewrite
         source: /*
@@ -148,8 +106,6 @@ services:
         value: SAMEORIGIN
 
     envVars:
-      # Read by env.ts → getRequiredEnvVar('VITE_BACKEND_URL').
-      # Baked into the JS bundle at Vite build time.
       - key: VITE_BACKEND_URL
         sync: false
 
