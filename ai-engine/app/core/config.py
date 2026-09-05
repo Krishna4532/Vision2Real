@@ -70,6 +70,30 @@ class Settings(BaseSettings):
             return ""
         return value.strip()
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: str | None) -> str:
+        if not value:
+            return "postgresql+asyncpg://postgres:postgres@localhost:5432/vision2real"
+        val = value.strip()
+        if val.startswith("postgres://"):
+            return val.replace("postgres://", "postgresql+asyncpg://", 1)
+        if val.startswith("postgresql://") and not val.startswith("postgresql+"):
+            return val.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return val
+
+    @field_validator("database_url_sync", mode="before")
+    @classmethod
+    def normalize_database_url_sync(cls, value: str | None) -> str:
+        if not value:
+            return "postgresql+psycopg://postgres:postgres@localhost:5432/vision2real"
+        val = value.strip()
+        if val.startswith("postgres://"):
+            return val.replace("postgres://", "postgresql+psycopg://", 1)
+        if val.startswith("postgresql://") and not val.startswith("postgresql+"):
+            return val.replace("postgresql://", "postgresql+psycopg://", 1)
+        return val
+
     @property
     def allowed_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
