@@ -128,21 +128,24 @@ async def conduct_research(
                         id=str(uuid.uuid4()),
                         claim_text=f"Research signal from {source.title or 'web source'}: {clean_content[:150]}",
                         claim_type="market_trend",
-                        status="inference",  # Marked as inference/untrusted source
+                        status="inference",
                         confidence=0.6,
+                        confidence_reason="Research content is available but not yet independently validated.",
+                        evidence_basis="INFERRED",
+                        provenance={"agent": "research", "extracted_by": "ResearchAgent", "url": source.url},
                         evidence_items=[evidence],
-                        # BUG FIX (Phase 2 audit): this previously omitted the
-                        # "agent" key. routes.py's GET handler buckets
-                        # persisted claims by provenance["agent"] ==
-                        # "research"/"competition"/"customer" to reconstruct
-                        # each agent's result. Without "agent": "research"
-                        # here, every research claim silently fell through
-                        # that check and GET /analysis/{id} always returned
-                        # an empty claims/sources list for research_result,
-                        # even when research succeeded and claims existed in
-                        # the database. "extracted_by" is kept for its
-                        # original diagnostic purpose.
-                        provenance={"agent": "research", "extracted_by": "ResearchAgent", "url": source.url}
+                        sources=[source],
+                        unknowns=[{
+                            "description": "Independent validation of this research signal",
+                            "why_it_matters": "The claim is derived from web content and needs confirmation before using it as a strong market fact.",
+                            "affected_agents": ["research", "market"],
+                            "blocking": False,
+                            "status": "open",
+                        }],
+                        missing_evidence=["Independent verification of content quality and relevance."],
+                        contradictions=[],
+                        decision_impact=[{"component": "Market", "dependency": "Market", "reason": "Research signal may affect market demand and opportunity assessment."}],
+                        reasoning_summary="Research content was retrieved and retained as an inferential market signal pending validation.",
                     )
                     result.claims.append(claim)
                 else:

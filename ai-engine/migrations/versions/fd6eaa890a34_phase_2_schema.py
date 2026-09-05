@@ -16,10 +16,15 @@ branch_labels = None
 depends_on = None
 
 
+from alembic import context, op
+
 def upgrade() -> None:
-    bind = op.get_bind()
-    inspector = sa.inspect(bind)
-    tables = inspector.get_table_names()
+    if context.is_offline_mode():
+        tables = []
+    else:
+        bind = op.get_bind()
+        inspector = sa.inspect(bind)
+        tables = inspector.get_table_names()
 
     # 1. Create analysis_jobs table
     if "analysis_jobs" not in tables:

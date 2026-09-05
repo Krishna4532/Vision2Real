@@ -1,0 +1,11 @@
+from __future__ import annotations
+
+
+class Roles:
+    SUPER_ADMIN = "SUPER_ADMIN"
+    ADMIN = "ADMIN"
+    OPERATIONS = "OPERATIONS"
+    SUPPORT = "SUPPORT"
+    FOUNDER = "FOUNDER"
+
+    ADMIN_ROLES = {SUPER_ADMIN, ADMIN, OPERATIONS, SUPPORT}

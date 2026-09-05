@@ -4,12 +4,23 @@ import functools
 
 from langgraph.graph import END, StateGraph
 
+from app.core.logging import logger
 from app.graph.state import GraphState
+from app.graph.orchestrator import GraphOrchestrator, PipelineConfig
 from app.services.analysis_service import run_classification, run_idea_structuring, run_preflight
 from app.services.llm_provider import BaseLLMProvider, get_llm_provider
+from app.services.status_rules import StatusDegradationRules
 from app.agents.research_agent import research_agent
 from app.agents.competition_agent import competition_agent
 from app.agents.customer_agent import customer_agent
+from app.agents.synthesis_agent import synthesis_agent
+from app.agents.business_model_agent import business_model_agent
+from app.agents.feasibility_agent import feasibility_agent
+from app.agents.financial_agent import financial_agent
+from app.agents.market_agent import market_agent
+from app.agents.risk_agent import risk_agent
+from app.agents.red_team_agent import red_team_agent
+from app.agents.decision_agent import decision_gate_node, validation_plan_node
 
 
 async def pre_flight_node(state: GraphState) -> GraphState:
@@ -48,7 +59,10 @@ async def classification_node(state: GraphState, llm_provider: BaseLLMProvider) 
 
 
 async def combined_state_node(state: GraphState) -> GraphState:
-    """Converge parallel agents and combine their errors and statuses."""
+    """Converge parallel agents and combine their errors and statuses.
+    
+    Uses centralized StatusDegradationRules for consistent status evaluation.
+    """
     state.current_stage = "combined_state"
 
     # Collect all agent errors
@@ -59,23 +73,121 @@ async def combined_state_node(state: GraphState) -> GraphState:
     if state.customer_errors:
         state.errors.extend(state.customer_errors)
 
-    # Evaluate degraded states
-    statuses = [state.research_status, state.competition_status, state.customer_status]
-
-    if "failed" in statuses:
-        # Hard failure in at least one agent → degraded
-        state.status = "degraded"
-    elif all(status == "success" for status in statuses):
-        state.status = "completed"
-    elif all(status in {"success", "partial"} for status in statuses):
-        # All agents completed but some returned partial (e.g. ambiguous idea, not enough context)
-        # This is expected for unclear/ambiguous ideas; use requires_clarification not degraded
-        state.status = "requires_clarification"
-    else:
-        state.status = "degraded"
+    # Evaluate phase status using centralized rules
+    agent_statuses = {
+        "research": state.research_status or "pending",
+        "competition": state.competition_status or "pending",
+        "customer": state.customer_status or "pending",
+    }
+    
+    phase_status, status_messages = StatusDegradationRules.evaluate_phase_status(
+        "phase_2", agent_statuses
+    )
+    
+    for msg in status_messages:
+        logger.info(msg)
+    
+    # Update overall pipeline status
+    old_status = state.status
+    state.status = StatusDegradationRules.update_overall_pipeline_status(
+        state.status, phase_status
+    )
+    
+    StatusDegradationRules.log_status_transition(
+        "phase_2", old_status, state.status, agent_statuses
+    )
 
     return state
 
+
+async def phase3_combined_state_node(state: GraphState) -> GraphState:
+    """Converge the parallel Phase 3 agents (business_model, feasibility,
+    market, risk - synthesis runs before them, sequentially, since they
+    depend on it; Red Team runs after this node, since it needs their
+    combined output to interrogate) and combine their errors/statuses,
+    mirroring combined_state_node's Phase 2 pattern.
+    
+    Uses centralized StatusDegradationRules for consistent status evaluation.
+    """
+    state.current_stage = "phase3_combined_state"
+
+    # Collect all phase 3 agent errors
+    if state.synthesis_errors:
+        state.errors.extend(state.synthesis_errors)
+    if state.business_model_errors:
+        state.errors.extend(state.business_model_errors)
+    if state.feasibility_errors:
+        state.errors.extend(state.feasibility_errors)
+    if state.financial_errors:
+        state.errors.extend(state.financial_errors)
+    if state.market_errors:
+        state.errors.extend(state.market_errors)
+    if state.risk_errors:
+        state.errors.extend(state.risk_errors)
+
+    # Evaluate phase 3 status using centralized rules
+    agent_statuses = {
+        "synthesis": state.synthesis_status or "pending",
+        "business_model": state.business_model_status or "pending",
+        "feasibility": state.feasibility_status or "pending",
+        "financial": state.financial_status or "pending",
+        "market": state.market_status or "pending",
+        "risk": state.risk_status or "pending",
+    }
+    
+    phase_status, status_messages = StatusDegradationRules.evaluate_phase_status(
+        "phase_3", agent_statuses
+    )
+    
+    for msg in status_messages:
+        logger.info(msg)
+    
+    state.phase3_status = phase_status
+    
+    # Update overall pipeline status
+    old_status = state.status
+    state.status = StatusDegradationRules.update_overall_pipeline_status(
+        state.status, phase_status
+    )
+    
+    StatusDegradationRules.log_status_transition(
+        "phase_3", old_status, state.status, agent_statuses
+    )
+
+    return state
+
+
+async def red_team_converge_node(state: GraphState) -> GraphState:
+    """Fold Red Team's errors/status into the pipeline using centralized rules.
+    
+    Red Team runs sequentially AFTER phase3_combined_state_node, consuming its
+    output, not in parallel with it (see build_graph's docstring/comments).
+    """
+    state.current_stage = "red_team_combined"
+
+    if state.red_team_errors:
+        state.errors.extend(state.red_team_errors)
+
+    # Evaluate red team phase status
+    agent_statuses = {"red_team": state.red_team_status or "pending"}
+    phase_status, status_messages = StatusDegradationRules.evaluate_phase_status(
+        "adversarial", agent_statuses
+    )
+    
+    for msg in status_messages:
+        logger.info(msg)
+    
+    # Update overall pipeline status
+    old_status = state.status
+    state.status = StatusDegradationRules.update_overall_pipeline_status(
+        state.status, phase_status
+    )
+    
+    StatusDegradationRules.log_status_transition(
+        "adversarial", old_status, state.status, agent_statuses
+    )
+
+    return state
 
 
 def build_graph(llm_provider: BaseLLMProvider | None = None) -> StateGraph:
@@ -103,7 +215,23 @@ def build_graph(llm_provider: BaseLLMProvider | None = None) -> StateGraph:
     
     # Phase 2 convergence node
     workflow.add_node("combined_state", combined_state_node)
-    
+
+    # Phase 3 nodes: synthesis runs first (all downstream Phase 3 agents
+    # consume its output), then business/feasibility/market/risk/financial run in
+    # parallel, then converge, then Red Team runs (it needs their combined
+    # output to interrogate), then the decision gate and validation plan.
+    workflow.add_node("synthesis_step", synthesis_agent)
+    workflow.add_node("business_model_step", business_model_agent)
+    workflow.add_node("feasibility_step", feasibility_agent)
+    workflow.add_node("financial_step", financial_agent)
+    workflow.add_node("market_step", market_agent)
+    workflow.add_node("risk_step", risk_agent)
+    workflow.add_node("phase3_combined_state", phase3_combined_state_node)
+    workflow.add_node("red_team_step", red_team_agent)
+    workflow.add_node("red_team_combined_state", red_team_converge_node)
+    workflow.add_node("decision_gate", decision_gate_node)
+    workflow.add_node("validation_plan_step", validation_plan_node)
+
     # Routing: pre_flight with rejection check
     def should_continue(state: GraphState) -> str:
         if not state.preflight or not state.preflight.is_valid:
@@ -126,8 +254,30 @@ def build_graph(llm_provider: BaseLLMProvider | None = None) -> StateGraph:
     workflow.add_edge("competition_step", "combined_state")
     workflow.add_edge("customer_step", "combined_state")
     
-    workflow.add_edge("combined_state", END)
-    
+    # Phase 3: converge from Phase 2's combined_state into synthesis, then
+    # fan out into business/feasibility/market/risk, then converge again,
+    # then Red Team (adversarial second pass over their combined output),
+    # then the decision gate and finally the validation plan.
+    workflow.add_edge("combined_state", "synthesis_step")
+
+    workflow.add_edge("synthesis_step", "business_model_step")
+    workflow.add_edge("synthesis_step", "feasibility_step")
+    workflow.add_edge("synthesis_step", "financial_step")
+    workflow.add_edge("synthesis_step", "market_step")
+    workflow.add_edge("synthesis_step", "risk_step")
+
+    workflow.add_edge("business_model_step", "phase3_combined_state")
+    workflow.add_edge("feasibility_step", "phase3_combined_state")
+    workflow.add_edge("financial_step", "phase3_combined_state")
+    workflow.add_edge("market_step", "phase3_combined_state")
+    workflow.add_edge("risk_step", "phase3_combined_state")
+
+    workflow.add_edge("phase3_combined_state", "red_team_step")
+    workflow.add_edge("red_team_step", "red_team_combined_state")
+    workflow.add_edge("red_team_combined_state", "decision_gate")
+    workflow.add_edge("decision_gate", "validation_plan_step")
+    workflow.add_edge("validation_plan_step", END)
+
     return workflow
 
 

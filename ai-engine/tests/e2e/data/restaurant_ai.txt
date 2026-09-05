@@ -1,0 +1,19 @@
+AI SaaS that reduces food waste in restaurants using computer vision, inventory tracking, predictive ordering and waste analytics.
+
+Problem: restaurants lose significant margin from spoilage, over-ordering, and poor inventory visibility.
+Target customer: restaurant operators, multi-unit chains, and food service teams.
+Solution: a platform that uses computer vision at the back of house, tracks inventory in real time, predicts purchase orders, and surfaces waste analytics to reduce spoilage.
+Business model: subscription SaaS for restaurants with implementation and analytics add-ons.
+
+Core features:
+- camera-based food inventory counts and shelf-life tracking
+- ingredient usage analytics across prep stations and menus
+- predictive ordering and purchase recommendation engine
+- waste event monitoring and root cause analysis
+- integration with POS and ERP systems
+
+Customer value:
+- lower food costs
+- fewer stockouts
+- better purchasing decisions
+- reduced labor time spent on manual inventory checks

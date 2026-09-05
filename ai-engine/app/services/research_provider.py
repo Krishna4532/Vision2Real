@@ -110,21 +110,80 @@ class MockResearchProvider(BaseResearchProvider):
         return f"Content from {url}: This is mock content for testing purposes."
 
 
-def get_research_provider() -> BaseResearchProvider:
-    """Factory selecting the configured research/search provider.
+class TavilyResearchProvider(BaseResearchProvider):
+    """Tavily research provider for real web search and content retrieval."""
+    
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        try:
+            from tavily import TavilyClient
+            self.client = TavilyClient(api_key=api_key)
+        except ImportError:
+            raise ImportError("tavily-python library is not installed. Install with: pip install tavily-python")
 
-    Mirrors get_llm_provider() in llm_provider.py. research_agent.py
-    previously hardcoded MockResearchProvider() directly, so
-    settings.research_provider had no effect. A real provider (e.g. a real
-    web search API) can be added as a BaseResearchProvider subclass and
-    wired in here without touching research_agent.py or research_service.py.
-    """
+    async def search(self, query: str, max_results: int = 5) -> list[SearchResult]:
+        """Execute a search query using Tavily API."""
+        try:
+            from tavily import TavilyClient
+            client = TavilyClient(api_key=self.api_key)
+            
+            response = client.search(
+                query=query,
+                max_results=max_results,
+                include_answer=True,
+            )
+            
+            results = []
+            for item in response.get("results", []):
+                result = SearchResult(
+                    title=item.get("title", ""),
+                    url=item.get("url"),
+                    snippet=item.get("content", ""),
+                    source_type="web",
+                    published_date=None,  # Tavily doesn't provide pub date in this format
+                )
+                results.append(result)
+            
+            return results
+        except Exception as exc:
+            raise ValueError(f"Tavily search failed: {exc}") from exc
+
+    async def retrieve_content(self, url: str) -> str | None:
+        """Retrieve full content from a URL using Tavily."""
+        try:
+            from tavily import TavilyClient
+            client = TavilyClient(api_key=self.api_key)
+            
+            # Use Tavily's extract endpoint for getting content
+            response = client.search(
+                query=f"site:{url}",
+                max_results=1,
+                include_answer=True,
+            )
+            
+            if response.get("results"):
+                return response["results"][0].get("content")
+            return None
+        except Exception as exc:
+            raise ValueError(f"Tavily content retrieval failed: {exc}") from exc
+
+
+def get_research_provider() -> BaseResearchProvider:
+    """Factory selecting the configured research/search provider."""
     from app.core.config import get_settings
 
     settings = get_settings()
+    
     if settings.research_provider == "mock":
         return MockResearchProvider()
+    
+    if settings.research_provider == "tavily":
+        if not settings.tavily_api_key:
+            raise ValueError("Tavily API key not configured. Set VISION2REAL_TAVILY_API_KEY")
+        return TavilyResearchProvider(settings.tavily_api_key)
+    
     raise NotImplementedError(
-        f"Research provider '{settings.research_provider}' is not implemented yet. "
-        "Available: 'mock'. Implement a BaseResearchProvider subclass and add it here."
+        f"Research provider '{settings.research_provider}' is not implemented. "
+        "Available: 'mock', 'tavily'"
     )
+

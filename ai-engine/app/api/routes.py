@@ -8,12 +8,33 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.models.analysis import AnalysisJobORM
-from app.schemas.analysis import AnalysisRequest, AnalysisResult, AnalysisStatus, StructuredIdea, ClassificationResult, PreflightResult
-from app.schemas.evidence import ResearchResult, CompetitionResult, CustomerResult, Claim, Evidence, Source
-from app.services.analysis_service import run_analysis_pipeline, save_analysis_findings
+from app.schemas.analysis import AnalysisRequest, AnalysisResult, AnalysisStatus
+from app.schemas.report import FounderReport
+from app.services.analysis_service import run_analysis_pipeline, save_analysis_findings, reconstruct_analysis_result
 from app.services.llm_provider import get_llm_provider
+from app.services.report_service import generate_founder_report
+
+from app.api.auth_routes import router as auth_router
+from app.api.dashboard_routes import router as dashboard_router
+from app.api.ideas_routes import router as ideas_router
+from app.api.validation_routes import router as validation_router
+from app.api.reality_sprint_routes import router as reality_sprint_router
+from app.api.build_request_routes import router as build_request_router
+from app.api.notification_routes import router as notification_router
+from app.api.settings_routes import router as settings_router
+from app.api.v1.admin import admin_router
 
 router = APIRouter(prefix="/api/v1")
+router.include_router(auth_router)
+router.include_router(dashboard_router)
+router.include_router(ideas_router)
+router.include_router(validation_router)
+router.include_router(reality_sprint_router)
+router.include_router(build_request_router)
+router.include_router(notification_router)
+router.include_router(settings_router)
+router.include_router(admin_router)
+
 
 
 @router.get("/health")
@@ -21,47 +42,24 @@ async def health_check():
     return {"status": "ok"}
 
 
-def map_source_orm_to_pydantic(s_orm) -> Source:
-    return Source(
-        id=s_orm.id,
-        url=s_orm.url,
-        title=s_orm.title,
-        publisher_domain=s_orm.publisher_domain,
-        publication_date=s_orm.publication_date,
-        retrieval_date=s_orm.retrieval_date,
-        source_type=s_orm.source_type,
-        credibility_notes=s_orm.credibility_notes,
-        credibility_score=s_orm.credibility_score,
-        retrieval_status=s_orm.retrieval_status,
-        additional_metadata=s_orm.additional_metadata or {},
-        created_at=s_orm.created_at
-    )
+@router.get("/analysis/{analysis_id}", response_model=AnalysisResult)
+async def get_analysis(analysis_id: str, db: AsyncSession = Depends(get_db)):
+    result = await reconstruct_analysis_result(analysis_id, db)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="analysis not found")
+    return result
 
 
-def map_evidence_orm_to_pydantic(e_orm) -> Evidence:
-    return Evidence(
-        id=e_orm.id,
-        excerpt=e_orm.excerpt,
-        evidence_type=e_orm.evidence_type,
-        confidence=e_orm.confidence,
-        relevance_notes=e_orm.relevance_notes,
-        created_at=e_orm.created_at,
-        sources=[map_source_orm_to_pydantic(s) for s in e_orm.sources]
-    )
-
-
-def map_claim_orm_to_pydantic(c_orm) -> Claim:
-    return Claim(
-        id=c_orm.id,
-        analysis_id=c_orm.analysis_id,
-        claim_text=c_orm.claim_text,
-        claim_type=c_orm.claim_type,
-        status=c_orm.status,
-        confidence=c_orm.confidence,
-        provenance=c_orm.provenance or {},
-        evidence_items=[map_evidence_orm_to_pydantic(e) for e in c_orm.evidence_items],
-        created_at=c_orm.created_at
-    )
+@router.get("/analysis/{analysis_id}/report", response_model=FounderReport)
+async def get_analysis_report(analysis_id: str, db: AsyncSession = Depends(get_db)):
+    """Phase 6: founder-facing report, deterministically transformed from the
+    already-persisted analysis. Does not run any agent, LLM, or search call -
+    see report_service.generate_founder_report for the isolation guarantee.
+    """
+    report = await generate_founder_report(analysis_id, db)
+    if report is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="analysis not found")
+    return report
 
 
 @router.post("/analysis", response_model=AnalysisStatus, status_code=status.HTTP_201_CREATED)
@@ -111,101 +109,13 @@ async def create_analysis(payload: AnalysisRequest, db: AsyncSession = Depends(g
             "customer_status": pipeline_result.customer_status,
             "errors": pipeline_result.errors,
             "warnings": pipeline_result.warnings,
+            "synthesis_status": pipeline_result.synthesis_status,
+            "business_model_status": pipeline_result.business_model_status,
+            "feasibility_status": pipeline_result.feasibility_status,
+            "market_status": pipeline_result.market_status,
+            "risk_status": pipeline_result.risk_status,
+            "red_team_status": pipeline_result.red_team_status,
+            "decision": pipeline_result.decision_result.decision if pipeline_result.decision_result else None,
         },
     )
 
-
-@router.get("/analysis/{analysis_id}", response_model=AnalysisResult)
-async def get_analysis(analysis_id: str, db: AsyncSession = Depends(get_db)):
-    result = await db.get(AnalysisJobORM, analysis_id)
-    if result is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="analysis not found")
-
-    # Map claims bucketed by agent
-    research_claims = []
-    competition_claims = []
-    customer_claims = []
-    
-    for c_orm in (result.claims or []):
-        p_claim = map_claim_orm_to_pydantic(c_orm)
-        agent = (c_orm.provenance or {}).get("agent")
-        if agent == "research":
-            research_claims.append(p_claim)
-        elif agent == "competition":
-            competition_claims.append(p_claim)
-        elif agent == "customer":
-            customer_claims.append(p_claim)
-
-    # Extract unique sources for each agent
-    def extract_sources(claims_list):
-        sources_list = []
-        seen_ids = set()
-        for c in claims_list:
-            for e in c.evidence_items:
-                for s in e.sources:
-                    if s.id not in seen_ids:
-                        seen_ids.add(s.id)
-                        sources_list.append(s)
-        return sources_list
-
-    research_sources = extract_sources(research_claims)
-    competition_sources = extract_sources(competition_claims)
-    customer_sources = extract_sources(customer_claims)
-
-    # Reconstruct agent results
-    research_result = None
-    if result.research_result:
-        research_result = ResearchResult(
-            status=result.research_result.status,
-            claims=research_claims,
-            sources=research_sources,
-            search_queries=[], # Not stored on ORM
-            findings=result.research_result.findings or {},
-            errors=result.research_result.errors or []
-        )
-
-    competition_result = None
-    if result.competition_result:
-        competition_result = CompetitionResult(
-            status=result.competition_result.status,
-            claims=competition_claims,
-            sources=competition_sources,
-            competitors=(result.competition_result.findings or {}).get("competitors", []),
-            findings=result.competition_result.findings or {},
-            errors=result.competition_result.errors or []
-        )
-
-    customer_result = None
-    if result.customer_result:
-        customer_result = CustomerResult(
-            status=result.customer_result.status,
-            claims=customer_claims,
-            sources=customer_sources,
-            customer_analysis=result.customer_result.findings or {},
-            findings=result.customer_result.findings or {},
-            errors=result.customer_result.errors or []
-        )
-
-    return AnalysisResult(
-        analysis_id=result.id,
-        status=result.status,
-        current_stage=result.current_stage,
-        structured_idea=result.structured_result and StructuredIdea.model_validate(result.structured_result),
-        classification=result.classification and ClassificationResult.model_validate(result.classification),
-        preflight=result.preflight and PreflightResult.model_validate(result.preflight),
-        
-        research_status=result.research_status,
-        research_errors=research_result.errors if research_result else [],
-        research_result=research_result,
-        
-        competition_status=result.competition_status,
-        competition_errors=competition_result.errors if competition_result else [],
-        competition_result=competition_result,
-        
-        customer_status=result.customer_status,
-        customer_errors=customer_result.errors if customer_result else [],
-        customer_result=customer_result,
-        
-        errors=result.errors or [],
-        warnings=result.warnings or [],
-    )

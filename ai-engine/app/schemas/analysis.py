@@ -5,6 +5,16 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.evidence import ResearchResult, CompetitionResult, CustomerResult
+from app.schemas.phase3 import (
+    SynthesisResult,
+    BusinessModelResult,
+    FeasibilityResult,
+    MarketResult,
+    RiskResult,
+    RedTeamResult,
+    DecisionResult,
+    ValidationPlan,
+)
 
 
 class AnalysisRequest(BaseModel):
@@ -123,3 +133,33 @@ class AnalysisResult(BaseModel):
     customer_status: str = "pending"
     customer_errors: list[str] = Field(default_factory=list)
     customer_result: CustomerResult | None = None
+
+    # Phase 3 results (all optional/None-safe so the existing API contract
+    # for Phase 1/2 consumers is unaffected - they simply won't reference
+    # these new fields).
+    synthesis_status: str = "pending"
+    synthesis_errors: list[str] = Field(default_factory=list)
+    synthesis_result: SynthesisResult | None = None
+
+    business_model_status: str = "pending"
+    business_model_errors: list[str] = Field(default_factory=list)
+    business_model_result: BusinessModelResult | None = None
+
+    feasibility_status: str = "pending"
+    feasibility_errors: list[str] = Field(default_factory=list)
+    feasibility_result: FeasibilityResult | None = None
+
+    risk_status: str = "pending"
+    risk_errors: list[str] = Field(default_factory=list)
+    risk_result: RiskResult | None = None
+
+    market_status: str = "pending"
+    market_errors: list[str] = Field(default_factory=list)
+    market_result: MarketResult | None = None
+
+    red_team_status: str = "pending"
+    red_team_errors: list[str] = Field(default_factory=list)
+    red_team_result: RedTeamResult | None = None
+
+    decision_result: DecisionResult | None = None
+    validation_plan: ValidationPlan | None = None

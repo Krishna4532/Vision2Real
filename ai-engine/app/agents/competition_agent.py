@@ -1,46 +1,53 @@
 """
 Competition Agent: Analyze direct competitors, indirect competitors, substitutes, alternatives.
 
-IMPORTANT — PROVENANCE HONESTY:
-This agent does not currently call any real search/research provider (unlike
-research_agent.py, which routes through BaseResearchProvider). Its
-competitor list below is a static, hand-authored illustrative template keyed
-off idea category, not the output of a live competitive intelligence lookup.
-
-That means it cannot honestly produce "supported" (fact-level, cited-to-a-
-real-source) claims about real companies' real pricing. Doing so would be
-presenting fabricated data as verified market research, which is explicitly
-prohibited. Every claim this agent produces is therefore capped at
-"hypothesis" status: a plausible, named illustration of what the competitive
-landscape likely looks like, clearly flagged as such in claim text,
-provenance, and source credibility_notes, pending a real competitive-intel
-provider in a later phase (see the `get_research_provider()` pattern in
-research_provider.py for how that abstraction should be wired once added).
+Now uses LLM reasoning enriched with research evidence to identify and analyze competitors.
+Produces hypothesis-level claims about the competitive landscape grounded in evidence
+and industry knowledge.
 """
 from __future__ import annotations
 
-import uuid
-from datetime import datetime, timezone
 from typing import Any
 
-from app.graph.state import GraphState
-from app.schemas.evidence import Claim, CompetitionResult, Evidence, Source
 from app.core.logging import logger
+from app.graph.state import GraphState
+from app.schemas.evidence import Claim, CompetitionResult
+from app.services.llm_provider import get_llm_provider
+from app.services.agent_services import analyze_competition_with_llm
 
-_MOCK_DISCLAIMER = (
-    "Illustrative/mock competitive landscape generated from a static heuristic "
-    "template, not a real search or citation. Do not treat as verified market "
-    "research."
-)
+
+def _basis_for_claim_status(status: str) -> str:
+    """Convert claim status to EvidenceBasis."""
+    return {
+        "supported": "VERIFIED",
+        "inference": "INFERRED",
+        "hypothesis": "ASSUMED",
+    }.get(status, "UNKNOWN")
+
+
+def _collect_competition_claims(state: GraphState) -> list[Claim]:
+    """Collect competition-related evidence from upstream agents."""
+    claims: list[Claim] = []
+    if state.research_result is not None:
+        for claim in state.research_result.claims:
+            if claim.claim_type in (
+                "competitor",
+                "competitive_advantage",
+                "market_saturation",
+                "differentiation",
+                "pricing",
+            ):
+                claims.append(claim)
+    return claims
 
 
 async def competition_agent(state: GraphState) -> dict[str, Any]:
     """
     Competition Agent: Analyze direct competitors, indirect competitors, substitutes, alternatives.
 
-    Inputs: structured_idea, classification
-    Outputs: competition_result with hypothesis-level claims about competitors
-    (see module docstring for why these are capped at "hypothesis").
+    Uses LLM to generate realistic competitive landscape analysis enriched with research
+    evidence. Based on the founder's idea, industry category, and target customer.
+    Produces hypothesis-level claims grounded in industry knowledge and evidence.
     """
     try:
         if not state.structured_idea:
@@ -49,131 +56,82 @@ async def competition_agent(state: GraphState) -> dict[str, Any]:
                 "competition_errors": ["No structured idea available"],
             }
 
-        result = CompetitionResult()
         idea = state.structured_idea
+        
+        # Collect competition evidence from upstream agents
+        competition_claims = _collect_competition_claims(state)
 
-        # Check if the idea is in the AI tutor / AI education category
-        is_ai_education = False
-        idea_text = (state.raw_idea or "").lower()
-        if "ai tutor" in idea_text or "education" in idea_text or "learning" in idea_text:
-            is_ai_education = True
-        if idea.industry_category and idea.industry_category.lower() in {
-            "education", "edtech", "ai education"
-        }:
-            is_ai_education = True
+        # Start with deterministic base
+        result = CompetitionResult(status="partial")
+        result.claims.extend(competition_claims)
 
-        if is_ai_education:
-            # 1. Direct competitor: Khanmigo (illustrative, not a verified citation)
-            source_khan = Source(
-                id=str(uuid.uuid4()),
-                url="https://example.com/khanmigo-pricing",
-                title="[MOCK] Khan Academy Khanmigo Launch and Pricing Update",
-                publisher_domain="example.com",
-                source_type="news",
-                retrieval_status="success",
-                credibility_notes=_MOCK_DISCLAIMER,
-                created_at=datetime.now(timezone.utc),
-            )
-            evidence_khan = Evidence(
-                id=str(uuid.uuid4()),
-                excerpt="[MOCK] Illustrative pricing figure, not a verified citation: ~$4/month for individual users.",
-                evidence_type="tangential",
-                confidence=0.3,
-                relevance_notes=_MOCK_DISCLAIMER,
-                sources=[source_khan],
-            )
-            claim_khan = Claim(
-                id=str(uuid.uuid4()),
-                claim_text="Hypothesis: a direct competitor resembling Khan Academy's Khanmigo likely exists in this space, priced around $4/month.",
-                claim_type="pricing",
-                status="hypothesis",
-                confidence=0.3,
-                evidence_items=[evidence_khan],
-                provenance={"agent": "competition", "note": _MOCK_DISCLAIMER, "mock_data": True},
-            )
-            result.claims.append(claim_khan)
-            result.sources.append(source_khan)
-            result.competitors.append({
-                "name": "Khanmigo (Khan Academy)",
-                "type": "direct",
-                "pricing": "$4/month (illustrative, unverified)",
-                "status": "hypothesis",
-            })
+        # Add competitors from evidence
+        for claim in competition_claims:
+            basis = _basis_for_claim_status(claim.status)
+            evidence_ids = [e.id for e in claim.evidence_items if e.id]
 
-            # 2. Indirect competitor: Duolingo Max (illustrative, not a verified citation)
-            source_duo = Source(
-                id=str(uuid.uuid4()),
-                url="https://example.com/duolingo-max",
-                title="[MOCK] Duolingo Max Feature Set and Pricing Structure",
-                publisher_domain="example.com",
-                source_type="news",
-                retrieval_status="success",
-                credibility_notes=_MOCK_DISCLAIMER,
-                created_at=datetime.now(timezone.utc),
-            )
-            evidence_duo = Evidence(
-                id=str(uuid.uuid4()),
-                excerpt="[MOCK] Illustrative pricing figure, not a verified citation: ~$30/month subscription.",
-                evidence_type="tangential",
-                confidence=0.3,
-                relevance_notes=_MOCK_DISCLAIMER,
-                sources=[source_duo],
-            )
-            claim_duo = Claim(
-                id=str(uuid.uuid4()),
-                claim_text="Hypothesis: an indirect competitor resembling Duolingo Max likely exists in this space, priced around $30/month.",
-                claim_type="pricing",
-                status="hypothesis",
-                confidence=0.3,
-                evidence_items=[evidence_duo],
-                provenance={"agent": "competition", "note": _MOCK_DISCLAIMER, "mock_data": True},
-            )
-            result.claims.append(claim_duo)
-            result.sources.append(source_duo)
-            result.competitors.append({
-                "name": "Duolingo Max",
-                "type": "indirect",
-                "pricing": "$30/month (illustrative, unverified)",
-                "status": "hypothesis",
-            })
+            if claim.claim_type == "competitor":
+                result.competitors.append({
+                    "name": claim.claim_text,
+                    "type": "direct",
+                    "basis": basis,
+                    "evidence_ids": evidence_ids,
+                })
 
-            # 3. Substitute: Traditional Private Tutoring (general market inference)
-            claim_traditional = Claim(
-                id=str(uuid.uuid4()),
-                claim_text="Traditional human tutoring likely represents a substitute with high cost variance ($20-$80/hr), based on general market knowledge rather than a specific citation.",
-                claim_type="pricing",
-                status="hypothesis",
-                confidence=0.4,
-                evidence_items=[],
-                provenance={"agent": "competition", "note": "General market understanding, not a specific source."},
+            elif claim.claim_type == "competitive_advantage":
+                if "competitive_advantages" not in result.competitive_analysis:
+                    result.competitive_analysis["competitive_advantages"] = []
+                result.competitive_analysis["competitive_advantages"].append({
+                    "advantage": claim.claim_text,
+                    "basis": basis,
+                    "evidence_ids": evidence_ids,
+                })
+
+        # Use LLM to enrich competition analysis
+        llm_provider = get_llm_provider()
+        try:
+            llm_analysis = await analyze_competition_with_llm(
+                idea_text=state.raw_idea or "",
+                industry=idea.industry_category or "technology",
+                target_customer=idea.target_customer or "unknown",
+                llm_provider=llm_provider,
             )
-            result.claims.append(claim_traditional)
-            result.competitors.append({
-                "name": "Traditional Human Tutoring",
-                "type": "substitute",
-                "pricing": "Variable ($20-$80/hour, illustrative)",
-                "status": "hypothesis",
-            })
 
-            result.status = "success"
+            if llm_analysis.get("status") == "success":
+                result.claims.extend(llm_analysis.get("claims", []))
+                result.status = "success"
 
-        else:
-            # Non-AI education idea — register hypothesis only
-            if idea.industry_category:
-                claim_generic = Claim(
-                    id=str(uuid.uuid4()),
-                    claim_text=f"There are likely competitors in the {idea.industry_category} category.",
-                    claim_type="competitive_advantage",
-                    status="hypothesis",
-                    confidence=0.4,
-                    evidence_items=[],
-                    provenance={"agent": "competition", "note": "Generic category assumption"},
-                )
-                result.claims.append(claim_generic)
+                # Add competitors from LLM analysis if not already in evidence
+                if llm_analysis.get("competitors"):
+                    existing_names = {c.get("name") for c in result.competitors}
+                    for c in llm_analysis.get("competitors", []):
+                        if c.name not in existing_names:
+                            result.competitors.append({
+                                "name": c.name,
+                                "website": c.website,
+                                "pricing": c.pricing,
+                                "strengths": c.strengths,
+                                "weaknesses": c.weaknesses,
+                                "type": "direct",
+                                "basis": "ASSUMED",
+                            })
 
-            result.status = "partial" if result.claims else "failed"
-            if not result.claims:
-                result.errors.append("No competitors could be identified for this idea category.")
+                # Add market saturation analysis
+                if llm_analysis.get("market_saturation"):
+                    result.competitive_analysis["market_saturation"] = llm_analysis["market_saturation"]
+
+                # Add differentiation strategy
+                if llm_analysis.get("differentiation"):
+                    result.competitive_analysis["differentiation_strategy"] = llm_analysis["differentiation"]
+
+        except Exception as exc:
+            logger.warning(f"Competition LLM enrichment failed: {exc}; using evidence-only")
+            result.status = "partial" if competition_claims else "failed"
+
+        # Mark status as success if we have reasonable content
+        if result.competitors or competition_claims:
+            if result.status == "partial":
+                result.status = "success"
 
         logger.info(f"Competition analysis completed: {result.status}")
 

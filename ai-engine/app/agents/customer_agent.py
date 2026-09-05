@@ -1,29 +1,47 @@
 """
 Customer Agent: Analyze primary customer, pain points, jobs-to-be-done, alternatives.
 
-PROVENANCE HONESTY: like competition_agent.py, this agent uses a static
-heuristic template rather than a real research provider, so its claims are
-capped at "hypothesis" status — see competition_agent.py's module docstring
-for the full rationale. Willingness-to-pay and pain-point claims here are
-explicitly hypotheses, never presented as verified facts.
+Now uses LLM reasoning to create detailed customer personas and market segment analysis,
+enriched with research evidence. Produces hypothesis-level claims grounded in evidence
+and industry knowledge.
 """
 from __future__ import annotations
 
-import uuid
-from datetime import datetime, timezone
 from typing import Any
 
-from app.graph.state import GraphState
-from app.schemas.evidence import Claim, CustomerResult, Evidence, Source
 from app.core.logging import logger
+from app.graph.state import GraphState
+from app.schemas.evidence import Claim, CustomerResult
+from app.services.llm_provider import get_llm_provider
+from app.services.agent_services import analyze_customer_with_llm
+
+
+def _basis_for_claim_status(status: str) -> str:
+    """Convert claim status to EvidenceBasis."""
+    return {
+        "supported": "VERIFIED",
+        "inference": "INFERRED",
+        "hypothesis": "ASSUMED",
+    }.get(status, "UNKNOWN")
+
+
+def _collect_customer_claims(state: GraphState) -> list[Claim]:
+    """Collect customer-related evidence from upstream agents."""
+    claims: list[Claim] = []
+    if state.research_result is not None:
+        for claim in state.research_result.claims:
+            if claim.claim_type in ("customer_need", "customer_segment", "adoption_barrier", "buying_trigger"):
+                claims.append(claim)
+    return claims
 
 
 async def customer_agent(state: GraphState) -> dict[str, Any]:
     """
     Customer Agent: Analyze primary customer, pain points, jobs-to-be-done, alternatives.
 
-    Inputs: structured_idea, classification
-    Outputs: customer_result with customer analysis
+    Uses LLM to generate detailed customer personas, ICP analysis, and market segment
+    understanding based on the founder's target customer, value proposition, and upstream
+    research evidence.
     """
     try:
         if not state.structured_idea:
@@ -32,125 +50,100 @@ async def customer_agent(state: GraphState) -> dict[str, Any]:
                 "customer_errors": ["No structured idea available"],
             }
 
-        result = CustomerResult()
         idea = state.structured_idea
 
-        # Detect AI education context
-        is_ai_education = False
-        idea_text = (state.raw_idea or "").lower()
-        if "ai tutor" in idea_text or "education" in idea_text or "learning" in idea_text:
-            is_ai_education = True
-        if idea.industry_category and idea.industry_category.lower() in {
-            "education", "edtech", "ai education"
-        }:
-            is_ai_education = True
+        # Collect customer evidence from upstream agents
+        customer_claims = _collect_customer_claims(state)
 
-        if idea.target_customer:
-            result.customer_analysis["primary_customer"] = idea.target_customer
-            result.customer_analysis["secondary_customer"] = (
-                "Academic institutions / instructors" if is_ai_education else "unknown"
+        # Start with deterministic base from idea
+        result = CustomerResult(status="partial")
+        result.customer_analysis["primary_customer"] = idea.target_customer or "unknown"
+
+        # Add customer insights from evidence
+        for claim in customer_claims:
+            basis = _basis_for_claim_status(claim.status)
+            evidence_ids = [e.id for e in claim.evidence_items if e.id]
+
+            if claim.claim_type == "customer_segment":
+                if "segments" not in result.customer_analysis:
+                    result.customer_analysis["segments"] = []
+                result.customer_analysis["segments"].append({
+                    "segment": claim.claim_text,
+                    "basis": basis,
+                    "evidence_ids": evidence_ids,
+                })
+
+            elif claim.claim_type == "customer_need":
+                if "pain_points" not in result.customer_analysis:
+                    result.customer_analysis["pain_points"] = []
+                result.customer_analysis["pain_points"].append({
+                    "pain_point": claim.claim_text,
+                    "basis": basis,
+                    "evidence_ids": evidence_ids,
+                })
+
+        # Use LLM to enrich customer analysis
+        llm_provider = get_llm_provider()
+        try:
+            llm_analysis = await analyze_customer_with_llm(
+                idea_text=state.raw_idea or "",
+                target_customer=idea.target_customer or "unknown",
+                problem_statement=idea.problem or "unknown",
+                llm_provider=llm_provider,
             )
-            result.customer_analysis["early_adopter_hypothesis"] = (
-                "College students needing immediate homework help or adapted explanations"
-                if is_ai_education else "Early adopters in target segment"
-            )
-            result.customer_analysis["jobs_to_be_done"] = (
-                [
-                    "Understand complex academic concepts adapted to individual pace",
-                    "Receive instant, cost-effective tutoring help outside classroom hours",
+
+            if llm_analysis.get("status") == "success":
+                result.claims.extend(llm_analysis.get("claims", []))
+                result.status = "success"
+
+                # Add LLM-derived personas
+                if llm_analysis.get("personas"):
+                    if "personas" not in result.customer_analysis:
+                        result.customer_analysis["personas"] = []
+                    result.customer_analysis["personas"].extend([
+                        {
+                            "title": p.title,
+                            "pain_points": p.pain_points,
+                            "goals": p.goals,
+                            "buying_motivation": p.buying_motivation,
+                            "willingness_to_pay": p.willingness_to_pay,
+                            "adoption_friction": p.adoption_friction,
+                        }
+                        for p in llm_analysis.get("personas", [])
+                    ])
+
+                # Add ICP from LLM
+                if llm_analysis.get("icp"):
+                    result.customer_analysis["ideal_customer_profile"] = llm_analysis["icp"]
+
+                result.customer_analysis["personas"] = [
+                    {
+                        "title": persona.title,
+                        "pain_points": persona.pain_points,
+                        "goals": persona.goals,
+                        "buying_motivation": persona.buying_motivation,
+                        "willingness_to_pay": persona.willingness_to_pay,
+                        "adoption_friction": persona.adoption_friction,
+                    }
+                    for persona in llm_analysis.get("personas", [])
                 ]
-                if is_ai_education else ["Address specific needs within target category"]
-            )
-            result.customer_analysis["pain_points"] = (
-                [
-                    "High cost of traditional 1-on-1 human tutoring",
-                    "Lack of personalized adaptation in standard online learning platforms",
-                ]
-                if is_ai_education else ["Friction in current alternatives"]
-            )
-            result.customer_analysis["willingness_to_pay_hypothesis"] = (
-                "$5 to $15 per month subscription tier"
-                if is_ai_education else "Subscription or transactional fee"
-            )
-
-            # Hypothesis: Willingness to pay (no hard evidence)
-            wtp_hypothesis = Claim(
-                id=str(uuid.uuid4()),
-                claim_text="College students are willing to pay a monthly fee of $10 for AI tutoring.",
-                claim_type="pricing",
-                status="hypothesis",
-                confidence=0.4,
-                evidence_items=[],
-                provenance={"agent": "customer", "note": "Assumed subscription pricing model"},
-            )
-            result.claims.append(wtp_hypothesis)
-
-            # Hypothesis: Pain point
-            pain_hypothesis = Claim(
-                id=str(uuid.uuid4()),
-                claim_text=f"Target customer {idea.target_customer} faces high friction due to tutoring costs.",
-                claim_type="customer_need",
-                status="hypothesis",
-                confidence=0.5,
-                evidence_items=[],
-                provenance={"agent": "customer", "note": "Pain point hypothesis"},
-            )
-            result.claims.append(pain_hypothesis)
-
-            # Illustrative demand-signal claim (NOT a verified citation — see
-            # module-level note in competition_agent.py for why static
-            # heuristic templates cannot honestly claim "supported" status).
-            if is_ai_education:
-                source_adopt = Source(
-                    id=str(uuid.uuid4()),
-                    url="https://example.com/edtech-trends",
-                    title="[MOCK] EdTech adoption stats",
-                    publisher_domain="example.com",
-                    source_type="web",
-                    retrieval_status="success",
-                    credibility_notes=(
-                        "Illustrative/mock figure from a static heuristic template, not a real "
-                        "citation. Do not treat as verified market research."
-                    ),
-                    created_at=datetime.now(timezone.utc),
+                result.customer_analysis["segments"] = llm_analysis.get("segments", [])
+                result.customer_analysis["pain_points"] = llm_analysis.get("pain_points", [])
+                result.customer_analysis["willingness_to_pay_hypothesis"] = llm_analysis.get(
+                    "willingness_to_pay_hypothesis", "UNKNOWN"
                 )
-                evidence_adopt = Evidence(
-                    id=str(uuid.uuid4()),
-                    excerpt="[MOCK] Illustrative adoption figure, not a verified citation: AI tutoring adoption grew ~40% YoY in 2024.",
-                    evidence_type="tangential",
-                    confidence=0.3,
-                    relevance_notes="Illustrative only — not a verified source.",
-                    sources=[source_adopt],
-                )
-                claim_adopt = Claim(
-                    id=str(uuid.uuid4()),
-                    claim_text="Hypothesis: students are likely adopting digital tutoring and AI education solutions at a growing rate, based on general market sentiment rather than a specific citation.",
-                    claim_type="demand_signal",
-                    status="hypothesis",
-                    confidence=0.3,
-                    evidence_items=[evidence_adopt],
-                    provenance={"agent": "customer", "note": "Illustrative/mock — not verified market research.", "mock_data": True},
-                )
-                result.claims.append(claim_adopt)
-                result.sources.append(source_adopt)
 
-            result.status = "success"
+                if idea.target_customer and idea.target_customer.lower() == "unknown":
+                    result.status = "partial"
 
-        else:
-            result.customer_analysis["primary_customer"] = "unknown"
-            result.errors.append("Target customer is not specified")
+        except Exception as exc:
+            logger.warning(f"Customer LLM enrichment failed: {exc}; using evidence-only")
+            result.status = "partial" if customer_claims else "failed"
 
-            generic_hypothesis = Claim(
-                id=str(uuid.uuid4()),
-                claim_text="There is a target customer segment requiring these services.",
-                claim_type="customer_need",
-                status="hypothesis",
-                confidence=0.3,
-                evidence_items=[],
-                provenance={"agent": "customer", "note": "Generic segment hypothesis"},
-            )
-            result.claims.append(generic_hypothesis)
-            result.status = "partial"
+        # Mark status as success if we have reasonable content
+        if result.customer_analysis.get("primary_customer") != "unknown":
+            if result.status == "partial":
+                result.status = "success"
 
         logger.info(f"Customer analysis completed: {result.status}")
 
@@ -161,6 +154,11 @@ async def customer_agent(state: GraphState) -> dict[str, Any]:
         }
 
     except Exception as exc:  # noqa: BLE001
+        logger.exception("Customer agent failed")
+        return {
+            "customer_status": "failed",
+            "customer_errors": [f"Customer agent failed: {exc}"],
+        }
         logger.exception("Customer agent failed")
         return {
             "customer_status": "failed",

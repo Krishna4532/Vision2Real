@@ -1,0 +1,386 @@
+/**
+ * Vision2Real – Build Request Detail Page Styles (UX Polish & Production Hardened)
+ */
+
+.v2r-detail-page {
+  padding: var(--space-xl);
+  max-width: 1240px;
+  margin: 0 auto;
+  min-height: calc(100vh - 120px);
+}
+
+.v2r-detail-header {
+  margin-bottom: var(--space-xl);
+}
+
+.v2r-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  text-decoration: none;
+  margin-bottom: var(--space-md);
+  transition: color 0.2s ease;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.v2r-back-link:hover {
+  color: var(--color-accent, #6366f1);
+}
+
+.v2r-detail-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.v2r-detail-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-xs) 0;
+  letter-spacing: -0.01em;
+}
+
+.v2r-detail-grid {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: var(--space-xl);
+}
+
+@media (max-width: 960px) {
+  .v2r-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.v2r-detail-card {
+  background: var(--color-bg-surface, rgba(15, 23, 42, 0.8));
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
+  backdrop-filter: blur(12px);
+}
+
+.v2r-detail-card__title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-md) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* Component 3: Rich Progress Stepper & Timeline */
+.v2r-tracking-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xs);
+}
+
+.v2r-tracking-progress-track {
+  height: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-bottom: var(--space-xl);
+}
+
+.v2r-tracking-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #10b981);
+  border-radius: 9999px;
+  transition: width 0.5s ease;
+}
+
+.v2r-rich-stepper {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  margin-bottom: var(--space-xl);
+  padding: 0 var(--space-xs);
+  overflow-x: auto;
+}
+
+.v2r-rich-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 80px;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.v2r-rich-step__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: var(--weight-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.v2r-rich-step--completed .v2r-rich-step__icon {
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
+}
+
+.v2r-rich-step--active .v2r-rich-step__icon {
+  background: #6366f1;
+  border-color: #a78bfa;
+  color: #fff;
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.7);
+  animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 8px rgba(99, 102, 241, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.9); }
+  100% { box-shadow: 0 0 8px rgba(99, 102, 241, 0.4); }
+}
+
+.v2r-rich-step__label {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  font-weight: var(--weight-medium);
+}
+
+.v2r-rich-step--active .v2r-rich-step__label {
+  color: var(--color-text-primary);
+  font-weight: var(--weight-bold);
+}
+
+.v2r-rich-step--completed .v2r-rich-step__label {
+  color: #34d399;
+}
+
+/* Briefing Grid */
+.v2r-brief-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-md);
+  background: rgba(0, 0, 0, 0.25);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.v2r-brief-item__label {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.v2r-brief-item__value {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+
+/* Component 7: Attachment Experience */
+.v2r-attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.v2r-attachment-card {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color 0.2s ease;
+}
+
+.v2r-attachment-card:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.v2r-attachment-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xs);
+}
+
+.v2r-attachment-card__icon {
+  font-size: 1.5rem;
+}
+
+.v2r-attachment-card__filename {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  word-break: break-all;
+}
+
+.v2r-attachment-card__meta {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.v2r-attachment-preview-img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-xs);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Component 2: Production Messaging Experience */
+.v2r-messages-container {
+  display: flex;
+  flex-direction: column;
+  height: 460px;
+}
+
+.v2r-messages-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.v2r-message-bubble {
+  max-width: 82%;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  position: relative;
+}
+
+.v2r-message-bubble--founder {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #fff;
+  border-bottom-right-radius: 2px;
+}
+
+.v2r-message-bubble--admin {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--color-text-primary);
+  border-bottom-left-radius: 2px;
+}
+
+.v2r-message-meta {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-xs);
+}
+
+.v2r-message-composer {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: flex-end;
+}
+
+.v2r-message-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.85rem;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.v2r-message-input:focus {
+  border-color: var(--color-accent, #6366f1);
+}
+
+/* Timeline */
+.v2r-timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  position: relative;
+  padding-left: var(--space-md);
+}
+
+.v2r-timeline-list::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.v2r-timeline-item {
+  position: relative;
+  padding-left: var(--space-md);
+}
+
+.v2r-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -13px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: var(--color-accent, #6366f1);
+  border: 2px solid var(--color-bg-surface, #0f172a);
+}
+
+.v2r-timeline-item__title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.v2r-timeline-item__date {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.v2r-timeline-item__desc {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}

@@ -46,7 +46,13 @@ class Evidence(BaseModel):
 
 
 class Claim(BaseModel):
-    """A factual claim made during analysis."""
+    """A factual claim made during analysis.
+
+    Canonical evidence contract for Phase 2 production intelligence.
+    Every future agent should populate these fields consistently so evidence,
+    provenance, uncertainty, contradiction pressure, and downstream impact are
+    preserved instead of being hidden in narrative text.
+    """
     id: str | None = None
     analysis_id: str | None = None
     claim_text: str
@@ -63,8 +69,16 @@ class Claim(BaseModel):
     ] = "other"
     status: Literal["supported", "inference", "hypothesis", "unsupported", "unknown"] = "unknown"
     confidence: float | None = None
+    confidence_reason: str = ""
+    evidence_basis: Literal["VERIFIED", "INFERRED", "HYPOTHESIS", "INSUFFICIENT_EVIDENCE"] = "INSUFFICIENT_EVIDENCE"
     provenance: dict[str, Any] = Field(default_factory=dict)
     evidence_items: list[Evidence] = Field(default_factory=list)
+    sources: list[Source] = Field(default_factory=list)
+    unknowns: list[dict[str, Any]] = Field(default_factory=list)
+    missing_evidence: list[str] = Field(default_factory=list)
+    contradictions: list[dict[str, Any]] = Field(default_factory=list)
+    decision_impact: list[dict[str, Any]] = Field(default_factory=list)
+    reasoning_summary: str = ""
     created_at: datetime | None = None
 
 
@@ -82,6 +96,7 @@ class CompetitionResult(BaseModel):
     """Results from the Competition Agent."""
     status: Literal["success", "partial", "failed"] = "failed"
     competitors: list[dict[str, Any]] = Field(default_factory=list)
+    competitive_analysis: dict[str, Any] = Field(default_factory=dict)
     claims: list[Claim] = Field(default_factory=list)
     sources: list[Source] = Field(default_factory=list)
     findings: dict[str, Any] = Field(default_factory=dict)

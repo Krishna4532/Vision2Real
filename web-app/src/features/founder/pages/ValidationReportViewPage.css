@@ -1,0 +1,283 @@
+/* ==========================================================================
+   ValidationReportViewPage — Detail View Styles
+   ========================================================================== */
+
+.vrvp-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-bottom: 4rem;
+}
+
+/* ─── Sticky Header (Component 12) ─────────────────────────────────────── */
+.vrvp-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(10, 15, 30, 0.9);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 0.75rem 0;
+  margin: -1rem 0 0;
+}
+
+.vrvp-sticky-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.vrvp-back-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.375rem;
+  transition: color 0.2s, background 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.vrvp-back-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.vrvp-sticky-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.vrvp-sticky-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+}
+
+.vrvp-sticky-score {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.03em;
+  flex-shrink: 0;
+}
+
+.vrvp-sticky-rec {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.375rem;
+  border: 1px solid;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.vrvp-sticky-confidence {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.vrvp-sticky-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.vrvp-sticky-actions a { text-decoration: none; }
+
+/* ─── Validation Timeline (Component 18) ─────────────────────────────── */
+.vrvp-timeline-wrap {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.vrvp-timeline-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.25rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.2s, background 0.2s;
+}
+
+.vrvp-timeline-toggle:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.vrvp-toggle-icon {
+  transition: transform 0.25s ease;
+  font-size: 1rem;
+}
+
+.vrvp-timeline {
+  overflow: hidden;
+}
+
+.vrvp-timeline-inner {
+  padding: 0 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.vrvp-timeline-step {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.vrvp-timeline-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.vrvp-timeline-node {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.vrvp-timeline-node--done {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1.5px solid rgba(16, 185, 129, 0.5);
+  color: #10b981;
+}
+
+.vrvp-timeline-node--pending {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.vrvp-timeline-line {
+  width: 2px;
+  flex: 1;
+  min-height: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 1px;
+  margin: 2px 0;
+}
+
+.vrvp-timeline-line--done {
+  background: rgba(16, 185, 129, 0.25);
+}
+
+.vrvp-timeline-content {
+  padding: 2px 0 20px;
+}
+
+.vrvp-timeline-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0 0.15rem;
+}
+
+.vrvp-timeline-label--done { color: rgba(255, 255, 255, 0.85); }
+.vrvp-timeline-label--pending { color: rgba(255, 255, 255, 0.3); }
+
+.vrvp-timeline-time {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.35);
+  margin: 0;
+}
+
+/* ─── Content Wrapper ────────────────────────────────────────────────── */
+.vrvp-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ─── Skeleton ──────────────────────────────────────────────────────── */
+.vrvp-skeleton-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.vrvp-skeleton {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.75rem;
+  animation: vrvp-shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes vrvp-shimmer {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.2; }
+}
+
+.vrvp-skeleton-block { width: 100%; }
+
+/* ─── Error State ────────────────────────────────────────────────────── */
+.vrvp-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+}
+
+.vrvp-error-icon { font-size: 2.5rem; }
+
+.vrvp-error-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.vrvp-error-desc {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.5);
+  max-width: 400px;
+  margin: 0;
+}
+
+.vrvp-error-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .vrvp-sticky-inner { gap: 0.5rem; }
+  .vrvp-sticky-title { max-width: 160px; }
+  .vrvp-sticky-actions { flex-wrap: wrap; }
+  .vrvp-sticky-confidence { display: none; }
+}

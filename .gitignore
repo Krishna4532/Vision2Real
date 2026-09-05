@@ -2,16 +2,18 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
 
 # Virtual environments
 .venv/
+.venv*/
 venv/
 env/
 
-# Secrets
-.env
-.env.*
+# Environment files & Secrets
+.env*
 !.env.example
+!.env.production.example
 
 # IDE
 .vscode/
@@ -21,15 +23,16 @@ env/
 .DS_Store
 Thumbs.db
 
-# Databases
+# Databases & SQLite
 *.db
 *.sqlite
 *.sqlite3
 
 # Logs
 *.log
+logs/
 
-# Build
+# Build & Output
 dist/
 build/
 *.egg-info/
@@ -39,4 +42,38 @@ node_modules/
 
 # Coverage
 .coverage
+coverage/
 htmlcov/
+coverage.xml
+
+# Generated Artifacts & Uploads
+uploads/
+cache/
+*.tmp
+*.bak
+*.zip
+# Reports
+full_test_report.txt
+report_after_provider_fix.txt
+
+# Logs
+*.log
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Archives
+*.zip
+
+# Uploads
+uploads/
+**/uploads/
+
+# Generated PDFs
+*.pdf
+
+# Prototype
+vision2real-hero.html
+

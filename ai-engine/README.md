@@ -1,19 +1,82 @@
 # Vision2Real AI Engine
 
-This repository contains the Phase 1 + Phase 2 implementation of the Vision2Real
-AI Intelligence Engine.
+This repository contains the FastAPI backend powering Vision2Real's AI Engine and Authentication System (Stage 2 complete).
 
-## Quick start
+## Quick Start
 
-1. Create a virtual environment.
-2. Install dependencies: `pip install -r requirements.txt`
-3. Copy `.env.example` to `.env` and adjust values. Variable names must match
-   `Settings` field names exactly with the `VISION2REAL_` prefix (e.g.
-   `VISION2REAL_DATABASE_URL` -> `Settings.database_url`).
-4. Run migrations: `alembic upgrade head`
-5. Start the API: `uvicorn app.main:app --reload`
+### 1. Environment Setup
+```bash
+# Create virtual environment
+python -m venv .venv
 
-## Pipeline
+# Activate virtual environment
+# On Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+# On Linux/macOS:
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 2. Environment Configuration
+Copy `.env.example` to `.env` and configure environment variables as needed:
+```bash
+cp .env.example .env
+```
+
+Ensure `VISION2REAL_JWT_SECRET_KEY` is configured. Variable names in `.env` map directly to Settings fields using the `VISION2REAL_` prefix (e.g. `VISION2REAL_DATABASE_URL` -> `Settings.database_url`).
+
+### 3. Database Migrations
+Run Alembic migrations to initialize the database schema (including Phase 1-3 AI engine tables, `users`, and `refresh_tokens`):
+```bash
+alembic upgrade head
+```
+
+### 4. Start Server
+Launch the FastAPI uvicorn development server:
+```bash
+uvicorn app.main:app --reload
+```
+
+The API will be available at:
+- **API Base**: `http://localhost:8000/api/v1`
+- **Health Check**: `http://localhost:8000/health`
+- **Interactive Swagger Docs**: `http://localhost:8000/docs`
+- **OpenAPI JSON Schema**: `http://localhost:8000/openapi.json`
+
+---
+
+## Authentication Endpoints (Stage 2 Complete)
+
+The AI Engine provides a platform-level authentication system supporting both password-based and Google OAuth logins with JWT access/refresh token rotation:
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/signup` | Register a new founder account (`full_name`, `email`, `password`) |
+| `POST` | `/api/v1/auth/login` | Authenticate founder with password |
+| `POST` | `/api/v1/auth/google` | Authenticate founder using Google OAuth ID token |
+| `POST` | `/api/v1/auth/refresh` | Rotate refresh token and issue new access/refresh pair |
+| `POST` | `/api/v1/auth/logout` | Revoke active refresh token |
+| `GET` | `/api/v1/auth/me` | Fetch authenticated founder profile (Requires `Authorization: Bearer <access_token>`) |
+
+---
+
+## Testing & Quality Assurance
+
+Run the test suite with pytest:
+```bash
+pytest tests/ -v
+```
+
+To run specifically the authentication tests:
+```bash
+pytest tests/test_auth.py -v
+```
+
+---
+
+## Architecture & AI Engine Pipeline
 
 ```
 Founder Idea -> Pre-flight -> Idea Structuring -> Classification
@@ -23,50 +86,24 @@ Founder Idea -> Pre-flight -> Idea Structuring -> Classification
                       Research                     Competition   Customer
                           +-------------- converge -------------+
                                             v
-                                     Combined State -> Persistence -> API
+                                     Combined State
+                                            v
+                                       Synthesis
+                                            v
+        +---------------+---------------+---------------+
+        v                v                v               v
+   Business Model    Feasibility        Market         Risk
+        +---------------+---------------+---------------+
+                                            v
+                                  Phase 3 Combined State
+                                            v
+                                        Red Team
+                                            v
+                                Red Team Combined State
+                                            v
+                                Deterministic Decision Gate
+                                            v
+                                     Validation Plan
+                                            v
+                               Founder Decision Brief -> Persistence -> API
 ```
-
-## Current scope (Phase 2 complete)
-
-- raw founder idea intake, API job creation, analysis persistence
-- LangGraph execution with parallel Phase 2 agents and a convergence node
-- pre-flight validation (including prompt-injection screening)
-- idea structuring, multi-label classification
-- Research, Competition, Customer agents
-- Claims/Evidence/Sources evidence architecture with many-to-many relationships
-- degraded-state handling when one or more Phase 2 agents fail
-
-## Provenance honesty (read before extending Research/Competition/Customer)
-
-Research routes through `BaseResearchProvider` (`app/services/research_provider.py`)
-and its claims are labeled `"inference"` - plausible signal derived from a
-provider, not verified fact.
-
-Competition and Customer do **not** currently call any research/search
-provider - they use static, hand-authored illustrative templates keyed off
-idea category. Because of that, every claim they produce is capped at
-`"hypothesis"` status, and their mock/illustrative sources are clearly
-labeled as such (`[MOCK]` titles, `credibility_notes` disclosing the
-template origin, `provenance["mock_data"] = True`). **Do not** relabel these
-as `"supported"` or attach real-looking sources without actually wiring in a
-real provider first - see `competition_agent.py`'s module docstring for the
-full rationale. This was a real bug found and fixed during the Phase 2 audit
-(named real companies with fabricated pricing were previously presented as
-`"supported"` fact, cited to fake `example.com` URLs).
-
-## Provider configuration
-
-`app/services/llm_provider.py::get_llm_provider()` and
-`app/services/research_provider.py::get_research_provider()` read
-`VISION2REAL_LLM_PROVIDER` / `VISION2REAL_RESEARCH_PROVIDER` from settings.
-Only `"mock"` is implemented for each; add a real provider by subclassing
-`BaseLLMProvider` / `BaseResearchProvider` and adding a branch to the
-relevant factory function - no other code needs to change, since
-`app/graph/workflow.py::build_graph()` binds the provider to nodes via
-`functools.partial` and threads it through the whole graph run.
-
-## Future phases
-
-Phase 3+ (Product & Feasibility, Red Team, Validation & Strategy,
-Deterministic Verdict, Structured Report, visualization) is intentionally
-not built yet.
