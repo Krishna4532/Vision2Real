@@ -151,10 +151,7 @@ services:
       # Read by env.ts → getRequiredEnvVar('VITE_BACKEND_URL').
       # Baked into the JS bundle at Vite build time.
       - key: VITE_BACKEND_URL
-        fromService:
-          type: web
-          name: vision2real-api
-          property: url
+        sync: false
 
       - key: VITE_APP_NAME
         value: Vision2Real
