@@ -25,7 +25,7 @@ services:
   - type: web
     name: vision2real-api
     runtime: python
-    plan: starter
+    plan: free
     rootDir: ai-engine
 
     # Install deps, then run Alembic migrations before starting uvicorn.
