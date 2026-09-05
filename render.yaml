@@ -1,9 +1,6 @@
 version: "1"
 
 services:
-  # ==========================
-  # FastAPI Backend
-  # ==========================
   - type: web
     name: vision2real-api
     runtime: python
@@ -17,103 +14,19 @@ services:
       uvicorn app.main:app --host 0.0.0.0 --port $PORT
 
     healthCheckPath: /health
-    autoDeploy: true
 
     envVars:
       - key: VISION2REAL_ENVIRONMENT
         value: production
 
-      - key: VISION2REAL_DEBUG
-        value: "false"
-
-      - key: VISION2REAL_EXECUTION_MODE
-        value: v1
-
-      - key: VISION2REAL_SECRET_KEY
-        generateValue: true
-
-      - key: VISION2REAL_JWT_SECRET_KEY
-        generateValue: true
-
-      - key: VISION2REAL_JWT_ALGORITHM
-        value: HS256
-
-      - key: VISION2REAL_ACCESS_TOKEN_EXPIRE_MINUTES
-        value: "60"
-
-      - key: VISION2REAL_REFRESH_TOKEN_EXPIRE_DAYS
-        value: "30"
-
-      # Set this manually in Render Dashboard
       - key: VISION2REAL_DATABASE_URL
         sync: false
 
       - key: VISION2REAL_DATABASE_URL_SYNC
         sync: false
 
-      - key: VISION2REAL_ALLOWED_ORIGINS
-        sync: false
+      - key: VISION2REAL_SECRET_KEY
+        generateValue: true
 
-      - key: VISION2REAL_LLM_PROVIDER
-        value: auto
-
-      - key: VISION2REAL_RESEARCH_PROVIDER
-        value: tavily
-
-      - key: VISION2REAL_GOOGLE_CLIENT_ID
-        sync: false
-
-      - key: VISION2REAL_GEMINI_API_KEY
-        sync: false
-
-      - key: VISION2REAL_OPENROUTER_API_KEY
-        sync: false
-
-      - key: VISION2REAL_GROQ_API_KEY
-        sync: false
-
-      - key: VISION2REAL_TAVILY_API_KEY
-        sync: false
-
-      - key: VISION2REAL_ADMIN_BOOTSTRAP_EMAIL
-        sync: false
-
-      - key: VISION2REAL_ADMIN_BOOTSTRAP_PASSWORD
-        sync: false
-
-  # ==========================
-  # React Frontend
-  # ==========================
-  - type: static
-    name: vision2real-web
-    plan: free
-    rootDir: web-app
-
-    buildCommand: npm install && npm run build
-
-    staticPublishPath: dist
-
-    pullRequestPreviewsEnabled: false
-
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-
-    headers:
-      - path: /*
-        name: X-Frame-Options
-        value: SAMEORIGIN
-
-    envVars:
-      - key: VITE_BACKEND_URL
-        sync: false
-
-      - key: VITE_APP_NAME
-        value: Vision2Real
-
-      - key: VITE_APP_ENV
-        value: production
-
-      - key: VITE_ENABLE_ANALYTICS
-        value: "false"
+      - key: VISION2REAL_JWT_SECRET_KEY
+        generateValue: true
