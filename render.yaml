@@ -12,7 +12,7 @@ databases:
   - name: vision2real-db
     databaseName: vision2real
     user: vision2real_user
-    plan: starter
+    plan: free
 
 # ------------------------------------------------------------
 # Services
