@@ -1,7 +1,7 @@
 """add validation models
 
 Revision ID: 4aaf0df4e719
-Revises: a1b2c3d4e5f6
+Revises: b2c3d4e5f6a1
 Create Date: 2026-08-30 16:57:48.322040
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '4aaf0df4e719'
-down_revision = 'a1b2c3d4e5f6'
+down_revision = 'b2c3d4e5f6a1'
 branch_labels = None
 depends_on = None
 
