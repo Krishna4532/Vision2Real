@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { FounderSidebar } from '@/features/founder/components/FounderSidebar';
 import { FounderHeader } from '@/features/founder/components/FounderHeader';
+import { RouteSEOTracker } from '@/components/seo/SEO';
 import '@/features/founder/components/FounderLayout.css';
 
 export function FounderLayout() {
@@ -45,8 +46,9 @@ export function FounderLayout() {
 
   return (
     <div className="v2r-workspace-shell">
-      {/* Desktop Sidebar */}
-      <div className="v2r-sidebar--desktop">
+      <RouteSEOTracker />
+      {/* Desktop Persistent Sidebar */}
+      <div className="v2r-sidebar-desktop-wrapper">
         <FounderSidebar />
       </div>
 

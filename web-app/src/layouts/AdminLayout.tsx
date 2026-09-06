@@ -2,6 +2,7 @@ import { Component, type ReactNode, type ErrorInfo } from 'react';
 import { Outlet } from 'react-router-dom';
 import { AdminSidebar } from '@/features/admin/components/AdminSidebar';
 import { AdminHeader } from '@/features/admin/components/AdminHeader';
+import { RouteSEOTracker } from '@/components/seo/SEO';
 import { AlertTriangle } from 'lucide-react';
 import '@/features/admin/components/AdminHQ.css';
 
@@ -56,6 +57,7 @@ class AdminErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundar
 export function AdminLayout() {
   return (
     <div className="v2r-admin-shell">
+      <RouteSEOTracker />
       {/* Isolated Admin Sidebar */}
       <AdminSidebar />
 

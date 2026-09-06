@@ -582,7 +582,7 @@ export function ValidationPage() {
                   </div>
 
                   <div className="v2r-form-section">
-                    <label>Attachments (Optional)</label>
+                    <label htmlFor="file-upload">Attachments (Optional)</label>
                     <div
                       className={`v2r-file-upload ${dragActive ? 'drag-active' : ''}`}
                       onDragEnter={handleDrag}
@@ -610,7 +610,7 @@ export function ValidationPage() {
                         {files.map((file, idx) => (
                           <div key={idx} className="v2r-file-item">
                             <span>{file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
-                            <button type="button" onClick={() => removeFile(idx)}>✕</button>
+                            <button type="button" onClick={() => removeFile(idx)} aria-label={`Remove file ${file.name}`}>✕</button>
                           </div>
                         ))}
                       </div>

@@ -74,8 +74,10 @@ export function BuildRequestForm({ onProceedToSummary }: BuildRequestFormProps) 
           </p>
 
           <textarea
+            id="build-product-description"
             className="v2r-idea-card__textarea"
             placeholder="Describe the product you'd like Vision2Real to build..."
+            aria-label="Describe the product you'd like Vision2Real to build"
             value={buildRequest.productDescription}
             onChange={(e) => {
               updateProductDescription(e.target.value);
@@ -122,8 +124,9 @@ export function BuildRequestForm({ onProceedToSummary }: BuildRequestFormProps) 
 
           {/* Estimated Budget (Free-Text Input) */}
           <div style={{ marginBottom: 'var(--space-lg)' }}>
-            <label className="v2r-idea-card__label">ESTIMATED BUDGET</label>
+            <label className="v2r-idea-card__label" htmlFor="build-budget">ESTIMATED BUDGET</label>
             <input
+              id="build-budget"
               type="text"
               className="v2r-auth-form__input"
               style={{ width: '100%' }}
@@ -138,8 +141,9 @@ export function BuildRequestForm({ onProceedToSummary }: BuildRequestFormProps) 
 
           {/* Additional Context */}
           <div>
-            <label className="v2r-idea-card__label">ADDITIONAL CONTEXT (OPTIONAL)</label>
+            <label className="v2r-idea-card__label" htmlFor="build-additional-context">ADDITIONAL CONTEXT (OPTIONAL)</label>
             <input
+              id="build-additional-context"
               type="text"
               className="v2r-auth-form__input"
               style={{ width: '100%' }}
@@ -160,8 +164,9 @@ export function BuildRequestForm({ onProceedToSummary }: BuildRequestFormProps) 
           <div className="v2r-auth-form" style={{ maxWidth: '100%' }}>
             <div className="v2r-summary-grid">
               <div className="v2r-auth-form__group">
-                <label className="v2r-auth-form__label">FULL NAME</label>
+                <label className="v2r-auth-form__label" htmlFor="build-name">FULL NAME</label>
                 <input
+                  id="build-name"
                   type="text"
                   className="v2r-auth-form__input"
                   placeholder="Alex Vance"
@@ -172,8 +177,9 @@ export function BuildRequestForm({ onProceedToSummary }: BuildRequestFormProps) 
               </div>
 
               <div className="v2r-auth-form__group">
-                <label className="v2r-auth-form__label">WORK EMAIL ADDRESS</label>
+                <label className="v2r-auth-form__label" htmlFor="build-email">WORK EMAIL ADDRESS</label>
                 <input
+                  id="build-email"
                   type="email"
                   className="v2r-auth-form__input"
                   placeholder="alex@startup.com"
@@ -186,8 +192,9 @@ export function BuildRequestForm({ onProceedToSummary }: BuildRequestFormProps) 
 
             <div className="v2r-summary-grid" style={{ marginTop: 'var(--space-md)' }}>
               <div className="v2r-auth-form__group">
-                <label className="v2r-auth-form__label">WHATSAPP / PHONE NUMBER</label>
+                <label className="v2r-auth-form__label" htmlFor="build-phone">WHATSAPP / PHONE NUMBER</label>
                 <input
+                  id="build-phone"
                   type="tel"
                   className="v2r-auth-form__input"
                   placeholder="+1 (555) 000-0000"
@@ -198,8 +205,9 @@ export function BuildRequestForm({ onProceedToSummary }: BuildRequestFormProps) 
               </div>
 
               <div className="v2r-auth-form__group">
-                <label className="v2r-auth-form__label">ACCOUNT PASSWORD</label>
+                <label className="v2r-auth-form__label" htmlFor="build-password">ACCOUNT PASSWORD</label>
                 <input
+                  id="build-password"
                   type="password"
                   className="v2r-auth-form__input"
                   placeholder="••••••••••••"

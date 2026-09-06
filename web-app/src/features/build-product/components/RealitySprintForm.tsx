@@ -127,8 +127,10 @@ export function RealitySprintForm({ onProceedToSummary }: RealitySprintFormProps
           </p>
 
           <textarea
+            id="sprint-description"
             className="v2r-idea-card__textarea"
             placeholder="Describe the critical user journey or prototype you want to test..."
+            aria-label="Describe the critical user journey or prototype you want to test"
             value={buildRequest.sprintDescription || buildRequest.productDescription}
             onChange={(e) => {
               updateSprintDescription(e.target.value);
@@ -173,8 +175,9 @@ export function RealitySprintForm({ onProceedToSummary }: RealitySprintFormProps
           </div>
 
           <div>
-            <label className="v2r-idea-card__label">ADDITIONAL CONTEXT (OPTIONAL)</label>
+            <label className="v2r-idea-card__label" htmlFor="sprint-additional-context">ADDITIONAL CONTEXT (OPTIONAL)</label>
             <input
+              id="sprint-additional-context"
               type="text"
               className="v2r-auth-form__input"
               style={{ width: '100%' }}
@@ -224,8 +227,9 @@ export function RealitySprintForm({ onProceedToSummary }: RealitySprintFormProps
           <div className="v2r-auth-form" style={{ maxWidth: '100%' }}>
             <div className="v2r-summary-grid">
               <div className="v2r-auth-form__group">
-                <label className="v2r-auth-form__label">FULL NAME</label>
+                <label className="v2r-auth-form__label" htmlFor="sprint-name">FULL NAME</label>
                 <input
+                  id="sprint-name"
                   type="text"
                   className="v2r-auth-form__input"
                   placeholder="Alex Vance"
@@ -236,8 +240,9 @@ export function RealitySprintForm({ onProceedToSummary }: RealitySprintFormProps
               </div>
 
               <div className="v2r-auth-form__group">
-                <label className="v2r-auth-form__label">WORK EMAIL ADDRESS</label>
+                <label className="v2r-auth-form__label" htmlFor="sprint-email">WORK EMAIL ADDRESS</label>
                 <input
+                  id="sprint-email"
                   type="email"
                   className="v2r-auth-form__input"
                   placeholder="alex@startup.com"
@@ -250,8 +255,9 @@ export function RealitySprintForm({ onProceedToSummary }: RealitySprintFormProps
 
             <div className="v2r-summary-grid" style={{ marginTop: 'var(--space-md)' }}>
               <div className="v2r-auth-form__group">
-                <label className="v2r-auth-form__label">WHATSAPP / PHONE NUMBER</label>
+                <label className="v2r-auth-form__label" htmlFor="sprint-phone">WHATSAPP / PHONE NUMBER</label>
                 <input
+                  id="sprint-phone"
                   type="tel"
                   className="v2r-auth-form__input"
                   placeholder="+1 (555) 000-0000"
@@ -262,8 +268,9 @@ export function RealitySprintForm({ onProceedToSummary }: RealitySprintFormProps
               </div>
 
               <div className="v2r-auth-form__group">
-                <label className="v2r-auth-form__label">ACCOUNT PASSWORD</label>
+                <label className="v2r-auth-form__label" htmlFor="sprint-password">ACCOUNT PASSWORD</label>
                 <input
+                  id="sprint-password"
                   type="password"
                   className="v2r-auth-form__input"
                   placeholder="••••••••••••"
